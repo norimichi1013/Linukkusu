@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/.linukkusu.sh"
+if [[ $# == 0 ]]; then
+    printf 'Usage: dev-run COMMAND [ARG...]\n' >&2
+    exit 2
+fi
+linukkusu_run "$@"

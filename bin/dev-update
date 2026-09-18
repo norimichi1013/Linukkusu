@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/.linukkusu.sh"
+[[ $# == 0 ]] || linukkusu_die 'Usage: dev-update'
+linukkusu_update

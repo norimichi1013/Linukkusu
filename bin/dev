@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/.linukkusu.sh"
+[[ $# == 0 ]] || linukkusu_die 'Usage: dev'
+# Start a fresh interactive login shell after removing boundary-only flags.
+linukkusu_shell --login -i

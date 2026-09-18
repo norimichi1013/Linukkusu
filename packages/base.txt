@@ -1,0 +1,12 @@
+# MSYS/POSIX infrastructure
+base-devel
+git
+
+# Windows-native UCRT64 development tools
+mingw-w64-ucrt-x86_64-toolchain
+mingw-w64-ucrt-x86_64-cmake
+mingw-w64-ucrt-x86_64-ninja
+mingw-w64-ucrt-x86_64-python
+mingw-w64-ucrt-x86_64-nodejs
+mingw-w64-ucrt-x86_64-ripgrep
+mingw-w64-ucrt-x86_64-fd
