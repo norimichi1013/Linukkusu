@@ -1,0 +1,29 @@
+name: Shell syntax
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    name: Git Bash syntax on Windows
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Check tracked shell scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' script; do
+            printf 'Checking %s\n' "$script"
+            bash -n "$script"
+          done < <(git ls-files -z '*.sh' 'bin/*')
+          git diff --check

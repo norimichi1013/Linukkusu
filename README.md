@@ -1,181 +1,177 @@
+<div align="center">
+
 # Linukkusu
 
-A user-space, Unix-like Windows development environment bootstrapped from
-**Windows + Git for Windows**. Git Bash starts the bootstrap; a private MSYS2
-installation supplies the UCRT64 development environment.
+### そうだ、git bashがあるじゃないか
 
-No WSL, administrator privileges, MSI installation, or preinstalled Node.js,
-Python, or CMake is required. Use a current Git for Windows on x86_64 Windows
-10/11, with internet access and several GB of free disk space.
+**Windows と Git for Windows から育てる、自分だけの開発環境。**
 
-## Quick start
+[![Shell syntax](https://github.com/norimichi1013/Linukkusu/actions/workflows/checks.yml/badge.svg)](https://github.com/norimichi1013/Linukkusu/actions/workflows/checks.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-In **Git Bash**:
+[はじめる](#はじめる) · [できること](#できること) · [設計と検証](docs/technical-guide.md) · [開発に参加する](CONTRIBUTING.md)
+
+</div>
+
+---
+
+Windows でも、いつものシェルでコードを書きたい。
+C++ をビルドしたい。Python も Node.js も使いたい。
+できれば、開発ツールのインストーラーを一つずつ巡るところからは始めたくない。
+
+そこで、すでに入っている Git for Windows に目を向ける。
+
+**そうだ、git bashがあるじゃないか。**
+
+Git Bash には、シェルも、ダウンロードの道具もある。
+その小さな足場から、自分専用の MSYS2 と UCRT64 の開発環境を組み立てる。
+それが **Linukkusu** です。
+
+入口は Git Bash。作業場は `~/.dev/Linukkusu`。
+リポジトリを clone して、`./bootstrap.sh` を実行するところから始まります。
+
+## はじめる
+
+用意するのは、**x86_64 の Windows 10 / 11 と、現在の Git for Windows**。
+ダウンロード用のインターネット接続と、数 GB の空き容量も必要です。
+WSL・管理者権限・開発ツールの MSI インストールは不要です。
+Node.js、Python、CMake を先に入れておく必要もありません。
+
+**Git Bash を開いて**実行します。
 
 ```bash
 git clone https://github.com/norimichi1013/Linukkusu.git
 cd Linukkusu
 ./bootstrap.sh
+
 export PATH="$HOME/.dev/bin:$PATH"
 dev
 ```
 
-Add the `export` line to your Git Bash `~/.bashrc` to keep it for future shells.
-Bootstrap does not edit shell startup files or the Windows PATH.
+```text
+MINGW64 /c/work/project
+$ dev
 
-```bash
-dev                       # Interactive UCRT64 login shell; exit returns to Git Bash
-dev-run python --version
-dev-run cmake --version
-dev-run node --version
-dev-run npm --version
-dev-run bash -c 'printf "%s\n" "$PWD"'
-dev-update                # Run from Git Bash after closing Linukkusu sessions
+UCRT64 /c/work/project
+$
 ```
 
-Both launchers retain the current working directory. `dev-run` forwards one
-command and its arguments and returns its exit status. Pipelines and shell
-syntax require an explicit `bash -c`, as in the example above.
+作業中のディレクトリを引き継いで、Linukkusu のシェルに入ります。
+`exit` で元の Git Bash に戻れます。
 
-## Installation and updates
+次回からも `dev` を使えるようにするには、上の `export` 行を
+Git Bash の `~/.bashrc` に追加してください。
+bootstrap が Windows の PATH やシェルの設定ファイルを書き換えることはありません。
+
+## できること
+
+| 道具 | 用途 |
+| --- | --- |
+| Bash・pacman・base-devel・Git | シェル操作、パッケージ管理、開発の土台 |
+| UCRT64 C/C++ toolchain | Windows 向けの C/C++ 開発 |
+| CMake・Ninja | プロジェクトの構成とビルド |
+| Python | スクリプトと開発ツール |
+| Node.js・npm | JavaScript の開発とパッケージ管理 |
+| ripgrep・fd | テキストとファイルの検索 |
+
+導入するパッケージは [`packages/base.txt`](packages/base.txt) にまとめています。
+
+### 入口は、三つのコマンド
+
+```bash
+dev                           # UCRT64 の対話シェルに入る
+dev-run python --version      # 環境内でコマンドを一つ実行する
+dev-update                    # インストール済みのパッケージを更新する
+```
+
+`dev-run` は引数と終了コードを引き継ぐので、Git Bash から必要な道具だけを
+呼び出すこともできます。パイプなどのシェル構文を使うときは、明示的に Bash を呼びます。
+
+```bash
+dev-run cmake --version
+dev-run node --version
+dev-run bash -c 'printf "%s\n" "$PWD"'
+```
+
+更新は、Linukkusu のシェルとバックグラウンドの作業を閉じてから、Git Bash で実行してください。
+MSYS2 のコア更新では、その環境で動いているプロセスが終了することがあります。
+
+## 小さく始めて、混ぜずに育てる
 
 ```text
-~/.dev/
-├── bin/
-│   ├── .linukkusu.sh       # Shared launcher implementation
-│   ├── dev
-│   ├── dev-run
-│   └── dev-update
-└── Linukkusu/
-    ├── usr/               # MSYS/POSIX infrastructure
-    ├── ucrt64/            # Windows-native development tools
-    ├── etc/
-    ├── var/
-    └── home/dev/          # Private home and dotfiles
+Windows
+└── Git for Windows / Git Bash
+    └── ./bootstrap.sh
+        └── ~/.dev/Linukkusu
+            ├── MSYS2     シェルとパッケージ管理
+            └── UCRT64    Windows ネイティブの開発ツール
 ```
 
-Bootstrap downloads the official **2026-06-11 x86_64 self-extracting archive**,
-checks its pinned SHA-256, extracts into a staging directory, and moves the
-completed tree into place. This archive does not run the Windows installer.
-A first login runs MSYS2's initialization scripts, including keyring setup.
-The source and checksum are pinned in `bootstrap.sh`; package signatures
-continue to be checked by pacman.
+Git Bash は bootstrap と起動の担当です。
+日々の開発は、独立した MSYS2 のランタイムで動く UCRT64 が担当します。
+Linux カーネルや Linux バイナリの実行環境を提供するものではありません。
 
-The Git Bash parent runs `pacman --noconfirm -Syu`, waits for it to finish,
-then invokes `pacman --noconfirm -Su` in a new MSYS2 process. This finishes
-the full upgrade after a core update terminates the old runtime. The second
-pass uses the same synchronized databases. Both passes replace the inner
-shell with pacman using `exec`, and propagate failures. Close all Linukkusu
-shells and background tasks first: a core update can terminate them.
+**Git Bash の PATH に追加するのは `~/.dev/bin` だけ。**
+Linukkusu の `usr/bin` を追加すると、二つの MSYS ランタイムを混ぜてしまいます。
+環境の境界は `dev` と `dev-run` が受け持ちます。
 
-Rerunning `./bootstrap.sh` updates the existing managed installation, installs
-missing entries from `packages/base.txt`, and refreshes the launchers. It
-preserves your private home and additional packages; removing a package from
-the list does not uninstall it. `dev-update` updates installed packages;
-rerun bootstrap after changing the repository's package list or launchers.
+ホームディレクトリも環境内の `/home/dev` に分けています。
+独自のビルド変数や認証設定は自動では引き継がないため、Linukkusu 内で設定するか、
+`dev-run env NAME=value COMMAND` で明示的に渡してください。
 
-The package list contains MSYS `base-devel` and `git`, plus the UCRT64
-toolchain, CMake, Ninja, Python, Node.js (including npm), ripgrep, and fd.
-Names are checked against the [official package catalog](https://packages.msys2.org/).
-This v0.1 reproduces the layout and package selection, **not identical package
-versions**: MSYS2 is a rolling distribution, and each full update resolves
-against its current repositories.
+### 同じ定義から、もう一度
 
-If an operation fails, fix the reported cause and rerun bootstrap. Failed
-downloads/extractions are retained in the printed staging directory for
-inspection. An existing unmarked destination is rejected instead of overwritten.
-After forcibly interrupting bootstrap, remove `~/.dev/.linukkusu-bootstrap.lock`
-only after checking that no bootstrap is running. Never remove pacman's
-database lock while pacman is active. Concurrent bootstrap/update/package
-installation is unsupported.
+`./bootstrap.sh` は再実行できます。既存の環境を更新し、不足するパッケージを追加して、
+ランチャーをリポジトリの定義に揃えます。ホームや追加で導入したパッケージは保持します。
+パッケージ一覧から項目を削除しても、自動ではアンインストールしません。
 
-## Runtime and argument boundary
+初期アーカイブの日付と SHA-256 は固定していますが、MSYS2 はローリング更新です。
+v0.1 が再現するのは**環境の構成とパッケージの選択**であり、全パッケージのバージョン固定ではありません。
 
-Only `~/.dev/bin` belongs on Git Bash's PATH. **Never add Linukkusu's
-`usr/bin` to Git Bash's PATH**: the two installations have separate MSYS DLLs.
-Each launcher invokes the private `bash.exe` with `MSYSTEM=UCRT64`,
-`CHERE_INVOKING=1`, and `MSYS2_PATH_TYPE=minimal`. A clean child environment
-keeps Windows facilities, terminal/locale settings and proxy settings, while
-discarding the outer toolchain PATH, exported functions and startup hooks.
-The private home also keeps Git Bash dotfiles from contaminating UCRT64.
-Custom build variables and credentials are not inherited automatically;
-configure them inside Linukkusu or pass them explicitly with `dev-run env`.
+## リポジトリの案内
 
-At the Git Bash → MSYS2 boundary, arguments, the working directory and selected
-environment variables travel through a temporary NUL-delimited file. This avoids
-cross-runtime environment rewriting and Windows command-line quoting; the file
-is removed when the child exits. A fixed shell program reads the records into
-an array, sets a clean environment inside MSYS2 and forwards `"$@"`; user input
-is never evaluated. Normal conversion to native Windows tools remains enabled
-inside MSYS2. Thus `/usr/...` refers to **Linukkusu**, not Git for Windows. Use
-`C:/...` paths when referring to files outside the private installation.
-
-For a native tool that needs literal POSIX-looking text instead of a converted
-Windows path, opt out inside the environment:
-
-```bash
-dev-run env MSYS2_ARG_CONV_EXCL='*' python -c 'import sys; print(sys.argv)' /literal
+```text
+Linukkusu/
+├── .github/              Issue・PR テンプレート、GitHub Actions
+├── bin/                  dev / dev-run / dev-update と共通処理
+├── docs/                 詳細な設計・運用・検証の記録
+├── packages/             導入するパッケージの定義
+├── tests/                Windows 上でのスモークテスト
+├── bootstrap.sh          Git Bash からのセットアップ
+├── CONTRIBUTING.md       開発と変更確認の手順
+├── LICENSE               MIT License
+└── README.md             このページ
 ```
 
-Shell scripts quote paths, including paths with spaces. Upstream
-[p11-kit has a known space-in-path bug](https://github.com/msys2/MINGW-packages/issues/22438)
-in its certificate extraction dispatcher. After package installation and updates,
-Linukkusu invokes `trust.exe` directly to regenerate the UCRT64 certificate
-bundles and propagates any failure. The upstream package hook may still print
-its error before this repair. Other upstream build tools can impose their own
-path restrictions.
+詳しいインストール構成、引数の扱い、更新時の復旧、空白を含むパスへの対策は
+[Technical guide（英語）](docs/technical-guide.md) にまとめています。
+不具合や提案は [Issues](https://github.com/norimichi1013/Linukkusu/issues) へどうぞ。
 
-## Validation
+## いまの到達点
 
-After bootstrap, run from Git Bash:
+**v0.1 の初期実装です。** 空白を含む隔離環境で、初期化、実際の runtime 更新、
+全パッケージ導入、bootstrap の再実行、引数の保持、CMake/Ninja による C++ ビルド、
+対話シェルの出入り、証明書を使った HTTPS 接続を確認しています。
 
-```bash
-bash tests/smoke.sh
-dev-run gcc --version
-dev-run cmake --version
-dev-run ninja --version
-dev-run python --version
-dev-run node --version
-dev-run npm --version
-dev-run rg --version
-dev-run fd --version
-```
+クリーンな Windows での既定パスへの初回導入、非 ASCII のユーザー名、
+Ctrl-C や通信中断からの復旧は、追加の確認が必要です。
+上の CI バッジは **Bash の構文チェック**の結果を示します。実環境テストの代わりにはなりません。
 
-The smoke test checks argument boundaries (empty values, spaces, quotes,
-metacharacters, newlines and Japanese text), working directories with spaces,
-PATH isolation, stdin, exit status, and MSYS2-to-native path conversion.
+Codex CLI、GitHub CLI、追加のパッケージ構成、dotfiles、VS Code 連携は今後の候補です。
+まずは、起動の仕組みを読んで理解できる、小さな開発環境から。
 
-Development validation used an isolated installation whose path contained spaces:
-initialization, an actual core-runtime upgrade, the full package list, repeat
-bootstrap, the smoke test, all tool versions, a CMake/Ninja C++ build, interactive
-shell entry/exit, and HTTPS with the repaired UCRT64 certificate bundle passed.
-The bootstrap test redirected installation paths into the workspace; it did not
-install into the developer's normal `~/.dev`.
+## 最初の Linukkusu は、手で作る
 
-Before declaring a release, validate on a clean Windows + Git for Windows
-machine: the complete bootstrap, a second bootstrap, interactive `dev` and
-Ctrl-C/exit, all tool versions and a CMake/Ninja C++ build, a user profile path
-with spaces/non-ASCII characters, and a real core-runtime upgrade. Also exercise
-interrupted downloads, pacman network failures and recovery. Automated shell
-checks alone do not establish these Windows installation/terminal behaviors.
+Windows と Git for Windows だけで始められる Linukkusu。
+けれど、その Linukkusu を置く**最初の GitHub リポジトリ**は、Git だけでは作れません。
+リポジトリの作成は、GitHub のサービスや API の仕事だからです。
 
-## The Bootstrap Paradox
+だから、最初の一つは手で作りました。
+その後は `gh` のような道具を追加すれば、次のリポジトリを作るところまで自分でできるようになります。
+なお、`gh` は現在の基本パッケージには含まれていません。
 
-Linukkusu requires only Windows and Git for Windows. But Git cannot create
-the first GitHub repository containing Linukkusu: repository creation belongs
-to GitHub's service/API, not the Git protocol. The first repository was therefore
-created manually.
+**最初の Linukkusu は人の手で。その先は、Linukkusu から。**
 
-Once Linukkusu exists, tools such as `gh` can be added so it can create
-repositories for its descendants. (`gh` is not part of this initial package set.)
+---
 
-**The first Linukkusu must be created by hand. After that, Linukkusu can reproduce.**
-
-## Upstream references
-
-- [Archive installation and initialization](https://www.msys2.org/docs/installer/)
-- [MSYS2 process invocation and two-pass CI updates](https://www.msys2.org/docs/ci/)
-- [Full upgrades and core-runtime restart](https://www.msys2.org/docs/updating/)
-- [UCRT64 environment selection](https://www.msys2.org/docs/environments/)
-- [Argument and environment path conversion](https://www.msys2.org/docs/filesystem-paths/)
-- [Pinned archive release](https://github.com/msys2/msys2-installer/releases/tag/2026-06-11)
+[MIT License](LICENSE) · Built on [Git for Windows](https://gitforwindows.org/) and [MSYS2](https://www.msys2.org/)
