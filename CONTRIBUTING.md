@@ -18,10 +18,19 @@
 Git Bash で、まず構文と差分を確認します。
 
 ```bash
-for script in bootstrap.sh bin/.linukkusu.sh bin/dev bin/dev-run bin/dev-update tests/smoke.sh; do
+mapfile -d '' -t scripts < <(git ls-files -z '*.sh' 'bin/*')
+for script in "${scripts[@]}"; do
   bash -n "$script" || break
 done
+shellcheck -s bash -S warning "${scripts[@]}"   # 導入済みなら
 git diff --check
+```
+
+`git diff --check` は作業ツリーと index を比べます。コミット後に確認するときは、
+CI と同じく空のツリーと比べてください。
+
+```bash
+git diff --check "$(git hash-object -t tree /dev/null)" HEAD
 ```
 
 bootstrap・ランチャー・パッケージ定義を変更した場合は、専用の Windows テスト環境で
@@ -45,7 +54,9 @@ dev
 Windows や Git for Windows のバージョン、確認できていない条件もあると再現しやすくなります。
 文書だけの変更であれば、リンクとコード例の確認で十分です。
 
-GitHub Actions は Windows 上で Bash の構文を確認します。
+GitHub Actions は、Windows 上で Bash の構文と全追跡ファイルの空白を確認し、
+別ジョブで ShellCheck（severity: warning）を実行します。ランタイム境界を越える
+シングルクォートのプログラムは意図的に literal なので、style / info の指摘は対象外です。
 MSYS2 のインストールや、実際の runtime 更新・対話操作は自動テストの対象外です。
 
 ローカルの検証用ファイルは `.test-work/` に置けます。このディレクトリは Git の対象外です。

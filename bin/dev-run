@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
+usage() {
+    printf '%s\n' \
+        'Usage: dev-run COMMAND [ARG...]' \
+        '' \
+        'Run one command inside the UCRT64 environment, in the current directory.' \
+        'Arguments and the exit status are preserved. Pipes and other shell' \
+        'syntax need an explicit bash -c, for example:' \
+        '' \
+        '    dev-run bash -c "cmake --build build | tee build.log"'
+}
+# Answer --help before the environment checks, so it works from any shell.
+case ${1-} in -h | --help) usage; exit 0 ;; esac
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/.linukkusu.sh"
 if [[ $# == 0 ]]; then
-    printf 'Usage: dev-run COMMAND [ARG...]\n' >&2
+    usage >&2
     exit 2
 fi
 linukkusu_run "$@"

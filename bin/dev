@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
+usage() {
+    printf '%s\n' \
+        'Usage: dev' \
+        '' \
+        'Enter an interactive UCRT64 login shell in the current directory.' \
+        'Run "exit" to return to Git Bash.'
+}
+# Answer --help before the environment checks, so it works from any shell.
+case ${1-} in -h | --help) usage; exit 0 ;; esac
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/.linukkusu.sh"
-[[ $# == 0 ]] || linukkusu_die 'Usage: dev'
+[[ $# == 0 ]] || linukkusu_die 'Usage: dev (see: dev --help)'
 # Start a fresh interactive login shell after removing boundary-only flags.
 linukkusu_shell --login -i

@@ -1,4 +1,4 @@
-name: Shell syntax
+name: Checks
 
 on:
   push:
@@ -8,6 +8,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   syntax:
@@ -26,4 +30,32 @@ jobs:
             printf 'Checking %s\n' "$script"
             bash -n "$script"
           done < <(git ls-files -z '*.sh' 'bin/*')
-          git diff --check
+      - name: Check whitespace errors in tracked files
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A bare "git diff --check" compares the work tree with the index and
+          # is therefore always empty on a fresh checkout. Diff the empty tree
+          # against HEAD so every tracked line is actually inspected.
+          git diff --check "$(git hash-object -t tree /dev/null)" HEAD
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Run shellcheck
+        run: |
+          set -euo pipefail
+          command -v shellcheck >/dev/null ||
+            { sudo apt-get update && sudo apt-get install -y shellcheck; }
+          shellcheck --version
+          # Static analysis only, so the runner OS does not have to be Windows.
+          # Severity "warning" skips style notes about the deliberately literal
+          # single-quoted programs that cross the runtime boundary.
+          mapfile -d '' -t scripts < <(git ls-files -z '*.sh' 'bin/*')
+          printf 'Checking %s\n' "${scripts[@]}"
+          shellcheck -s bash -S warning "${scripts[@]}"

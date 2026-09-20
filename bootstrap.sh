@@ -56,8 +56,17 @@ linukkusu_refresh_certificates
 
 mkdir -p -- "$HOME/.dev/bin"
 for launcher in .linukkusu.sh dev dev-run dev-update; do
-    cp -- "$repo/bin/$launcher" "$HOME/.dev/bin/$launcher"
-    chmod +x -- "$HOME/.dev/bin/$launcher"
+    dest="$HOME/.dev/bin/$launcher"
+    staged="$HOME/.dev/bin/.$launcher.new"
+    cp -- "$repo/bin/$launcher" "$staged"
+    # .linukkusu.sh is sourced, so only the entry points need the bit.
+    [[ "$launcher" == .linukkusu.sh ]] || chmod +x -- "$staged"
+    # Replace in one step: overwriting in place can corrupt a launcher that a
+    # running shell is still reading.
+    mv -f -- "$staged" "$dest" || {
+        rm -f -- "$staged"
+        linukkusu_die "Could not replace $dest. Close running Linukkusu shells and rerun."
+    }
 done
 printf '\n%s\n' 'Linukkusu is ready. Add this to your Git Bash ~/.bashrc if needed:'
 printf '%s\n' 'export PATH="$HOME/.dev/bin:$PATH"' 'Then run: dev'

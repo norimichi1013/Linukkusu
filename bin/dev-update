@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
+usage() {
+    printf '%s\n' \
+        'Usage: dev-update' \
+        '' \
+        'Update the installed packages. Run it from Git Bash after closing every' \
+        'Linukkusu shell and background task: a core update can terminate them.'
+}
+# Answer --help before the environment checks, so it works from any shell.
+case ${1-} in -h | --help) usage; exit 0 ;; esac
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/.linukkusu.sh"
-[[ $# == 0 ]] || linukkusu_die 'Usage: dev-update'
+[[ $# == 0 ]] || linukkusu_die 'Usage: dev-update (see: dev-update --help)'
 linukkusu_update
