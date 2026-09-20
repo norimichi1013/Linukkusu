@@ -82,9 +82,11 @@ linukkusu_update() {
     printf '%s\n' 'Close all Linukkusu shells and tasks before updating.'
     # exec replaces the inner Bash: pacman must not kill a waiting parent
     # shell and make the outer Git Bash lose the actual updater exit status.
-    linukkusu_run /usr/bin/pacman --noconfirm -Syu
+    # -uu also allows downgrades, so a package rolled back upstream can still
+    # be resolved instead of stalling the whole upgrade.
+    linukkusu_run /usr/bin/pacman --noconfirm -Syuu
     # A core update exits before the rest of the system is upgraded. Start a
     # fresh runtime, using the SAME databases to avoid another core-update race.
-    linukkusu_run /usr/bin/pacman --noconfirm -Su
+    linukkusu_run /usr/bin/pacman --noconfirm -Suu
     linukkusu_refresh_certificates
 }

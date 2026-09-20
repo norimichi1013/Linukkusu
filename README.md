@@ -6,7 +6,7 @@
 
 **Windows と Git for Windows から育てる、自分だけの開発環境。**
 
-[![Shell syntax](https://github.com/norimichi1013/Linukkusu/actions/workflows/checks.yml/badge.svg)](https://github.com/norimichi1013/Linukkusu/actions/workflows/checks.yml)
+[![Checks](https://github.com/norimichi1013/Linukkusu/actions/workflows/checks.yml/badge.svg)](https://github.com/norimichi1013/Linukkusu/actions/workflows/checks.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 [はじめる](#はじめる) · [できること](#できること) · [設計と検証](docs/technical-guide.md) · [開発に参加する](CONTRIBUTING.md)
@@ -84,6 +84,8 @@ dev-run python --version      # 環境内でコマンドを一つ実行する
 dev-update                    # インストール済みのパッケージを更新する
 ```
 
+それぞれ `--help` で使い方を表示します。
+
 `dev-run` は引数と終了コードを引き継ぐので、Git Bash から必要な道具だけを
 呼び出すこともできます。パイプなどのシェル構文を使うときは、明示的に Bash を呼びます。
 
@@ -118,6 +120,14 @@ Linukkusu の `usr/bin` を追加すると、二つの MSYS ランタイムを�
 ホームディレクトリも環境内の `/home/dev` に分けています。
 独自のビルド変数や認証設定は自動では引き継がないため、Linukkusu 内で設定するか、
 `dev-run env NAME=value COMMAND` で明示的に渡してください。
+
+分離されるのは POSIX 側のホームです。node・npm・Python のように **Windows ネイティブとして
+動くツールは、引き続き Windows の `USERPROFILE` や `APPDATA` を参照します**。
+たとえば `npm install -g` の配置先は `%APPDATA%\npm` のままで、Windows 側の Node.js と共有します。
+
+Git Bash の PATH も引き継ぎません。環境内からは `cmd.exe`・PowerShell・`where` や、
+Windows 側の Git に付属する認証ヘルパーは見えません。必要な道具は Linukkusu 内に導入するか、
+`dev-run env` で明示的に渡してください。
 
 ### 同じ定義から、もう一度
 
@@ -154,8 +164,10 @@ Linukkusu/
 対話シェルの出入り、証明書を使った HTTPS 接続を確認しています。
 
 クリーンな Windows での既定パスへの初回導入、非 ASCII のユーザー名、
-Ctrl-C や通信中断からの復旧は、追加の確認が必要です。
-上の CI バッジは **Bash の構文チェック**の結果を示します。実環境テストの代わりにはなりません。
+Ctrl-C や通信中断からの復旧、環境内の Git（MSYS 側）による HTTPS の clone は、
+追加の確認が必要です。証明書バンドルの修復は現在 UCRT64 側のみを対象にしています。
+上の CI バッジは **Bash の構文チェック・ShellCheck・空白の検査**の結果を示します。
+実環境テストの代わりにはなりません。
 
 Codex CLI、GitHub CLI、追加のパッケージ構成、dotfiles、VS Code 連携は今後の候補です。
 まずは、起動の仕組みを読んで理解できる、小さな開発環境から。
