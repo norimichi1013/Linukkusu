@@ -47,4 +47,17 @@ status=0
 printf '%s\0' "${args[@]}" | cmp - "$scratch/input"
 # Default MSYS2 -> Win32 path conversion must still work.
 "$run" python -c 'import os,sys; assert os.path.isfile(sys.argv[1]), sys.argv' /usr/bin/bash.exe
-printf '%s\n' 'PASS: cwd, runtime PATH, arguments, stdin, status, and native path conversion'
+
+# Both runtimes need a usable CA bundle. Their ca-certificates hooks run
+# "p11-kit extract", which fails on a path containing spaces
+# (MINGW-packages#22438), so Linukkusu regenerates the bundles directly.
+"$run" bash -c '
+    for bundle in /ucrt64/etc/ssl/certs/ca-bundle.crt /usr/ssl/certs/ca-bundle.crt; do
+        [[ -s $bundle ]] || { printf "missing or empty: %s\n" "$bundle" >&2; exit 20; }
+        grep -q "BEGIN CERTIFICATE" "$bundle" ||
+            { printf "no certificate in: %s\n" "$bundle" >&2; exit 21; }
+    done
+'
+
+printf '%s\n' 'PASS: cwd, runtime PATH, arguments, stdin, status, native path conversion,'
+printf '%s\n' '      and the UCRT64/MSYS certificate bundles'

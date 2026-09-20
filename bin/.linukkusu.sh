@@ -52,29 +52,38 @@ linukkusu_run() {
 
 linukkusu_refresh_certificates() {
     # Upstream p11-kit dispatch cannot quote its trust.exe path when the
-    # installation contains spaces (MINGW-packages#22438). Invoke trust
-    # directly, using the package's own extraction formats and destinations.
+    # installation contains spaces (MINGW-packages#22438). Both ca-certificates
+    # packages hit it: their install hooks run "p11-kit extract", which is the
+    # dispatch that fails. Invoke trust directly for each runtime, using that
+    # package's own extraction formats and destinations.
+    #   UCRT64: mingw-w64-ucrt-x86_64-ca-certificates
+    #   MSYS:   ca-certificates, which curl/openssl and the MSYS git read
     linukkusu_run /usr/bin/bash -ec '
-        [[ -x /ucrt64/bin/trust.exe ]] || exit 0
-        printf "%s\n" "Refreshing UCRT64 certificate bundles (direct trust.exe invocation)..."
-        dest=/ucrt64/etc/pki/ca-trust/extracted
-        /ucrt64/bin/trust.exe extract --format=openssl-bundle --filter=certificates \
-            --overwrite --comment "$dest/openssl/ca-bundle.trust.crt"
-        for purpose in server-auth email code-signing; do
-            case "$purpose" in
-                server-auth) name=tls-ca-bundle.pem ;;
-                email) name=email-ca-bundle.pem ;;
-                code-signing) name=objsign-ca-bundle.pem ;;
-            esac
-            /ucrt64/bin/trust.exe extract --format=pem-bundle --filter=ca-anchors \
-                --overwrite --comment --purpose "$purpose" "$dest/pem/$name"
-        done
-        /ucrt64/bin/trust.exe extract --format=java-cacerts --filter=ca-anchors \
-            --overwrite --purpose server-auth "$dest/java/cacerts"
-        test -s "$dest/pem/tls-ca-bundle.pem"
-        cp -- "$dest/pem/tls-ca-bundle.pem" /ucrt64/etc/ssl/certs/ca-bundle.crt
-        cp -- "$dest/pem/tls-ca-bundle.pem" /ucrt64/etc/ssl/cert.pem
-        cp -- "$dest/openssl/ca-bundle.trust.crt" /ucrt64/etc/ssl/certs/ca-bundle.trust.crt
+        refresh() {
+            local label=$1 trust=$2 dest=$3 ssl=$4 purpose name
+            # Absent runtime or package: nothing of ours to repair.
+            [[ -x $trust ]] || return 0
+            printf "%s\n" "Refreshing $label certificate bundles (direct trust.exe invocation)..."
+            "$trust" extract --format=openssl-bundle --filter=certificates \
+                --overwrite --comment "$dest/openssl/ca-bundle.trust.crt"
+            for purpose in server-auth email code-signing; do
+                case "$purpose" in
+                    server-auth) name=tls-ca-bundle.pem ;;
+                    email) name=email-ca-bundle.pem ;;
+                    code-signing) name=objsign-ca-bundle.pem ;;
+                esac
+                "$trust" extract --format=pem-bundle --filter=ca-anchors \
+                    --overwrite --comment --purpose "$purpose" "$dest/pem/$name"
+            done
+            "$trust" extract --format=java-cacerts --filter=ca-anchors \
+                --overwrite --purpose server-auth "$dest/java/cacerts"
+            test -s "$dest/pem/tls-ca-bundle.pem"
+            cp -- "$dest/pem/tls-ca-bundle.pem" "$ssl/certs/ca-bundle.crt"
+            cp -- "$dest/pem/tls-ca-bundle.pem" "$ssl/cert.pem"
+            cp -- "$dest/openssl/ca-bundle.trust.crt" "$ssl/certs/ca-bundle.trust.crt"
+        }
+        refresh UCRT64 /ucrt64/bin/trust.exe /ucrt64/etc/pki/ca-trust/extracted /ucrt64/etc/ssl
+        refresh MSYS /usr/bin/trust.exe /etc/pki/ca-trust/extracted /usr/ssl
     '
 }
 

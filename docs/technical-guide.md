@@ -144,14 +144,23 @@ dev-run env MSYS2_ARG_CONV_EXCL='*' python -c 'import sys; print(sys.argv)' /lit
 
 Shell scripts quote paths, including paths with spaces. Upstream
 [p11-kit has a known space-in-path bug](https://github.com/msys2/MINGW-packages/issues/22438)
-in its certificate extraction dispatcher. After package installation and updates,
-Linukkusu invokes `trust.exe` directly to regenerate the UCRT64 certificate
-bundles and propagates any failure. The upstream package hook may still print
-its error before this repair. **The repair covers the UCRT64 bundles only**:
-the MSYS bundle under `/usr/ssl/certs`, used by the MSYS `git` in the package
-list, is left to its own package hook and has not been verified under an
-installation path containing spaces. Other upstream build tools can impose
-their own path restrictions.
+in its certificate extraction dispatcher. Both `ca-certificates` packages
+reach that dispatcher: each install hook runs `p11-kit extract`, which spawns
+`trust.exe` and truncates its path at the first space. After package
+installation and updates, Linukkusu therefore invokes `trust.exe` directly for
+each runtime, using that package's own extraction formats and destinations, and
+propagates any failure:
+
+| Runtime | trust | Extracted | Bundles |
+| --- | --- | --- | --- |
+| UCRT64 | `/ucrt64/bin/trust.exe` | `/ucrt64/etc/pki/ca-trust/extracted` | `/ucrt64/etc/ssl/` |
+| MSYS | `/usr/bin/trust.exe` | `/etc/pki/ca-trust/extracted` | `/usr/ssl/` |
+
+The MSYS bundles are what the MSYS `git`, curl and OpenSSL in the package list
+read, so an HTTPS `git clone` inside the environment depends on them. A runtime
+whose `trust.exe` is absent is skipped rather than treated as an error. The
+upstream package hooks may still print their own error before this repair.
+Other upstream build tools can impose their own path restrictions.
 
 ## Validation
 
@@ -171,7 +180,8 @@ dev-run fd --version
 
 The smoke test checks argument boundaries (empty values, spaces, quotes,
 metacharacters, newlines and Japanese text), working directories with spaces,
-PATH isolation, stdin, exit status, and MSYS2-to-native path conversion.
+PATH isolation, stdin, exit status, MSYS2-to-native path conversion, and that
+both runtimes ended up with a non-empty CA bundle.
 
 Development validation used an isolated installation whose path contained spaces:
 initialization, an actual core-runtime upgrade, the full package list, repeat
